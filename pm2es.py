@@ -21,7 +21,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import sys
 import json
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Configuration Elasticsearch
 ELASTICSEARCH_HOST = '<REPLACE_ME>'
@@ -32,10 +32,13 @@ now = datetime.utcnow()
 INDEX_NAME = f"sflow-{now.strftime('%Y.%m.%d')}"
 FULL_INDEX_URL = f"http://{ELASTICSEARCH_HOST}:{ELASTICSEARCH_PORT}/{INDEX_NAME}"
 
-TIMESTAMP = now.strftime('%Y-%m-%dT%H:%M') + 'Z'
+TIMESTAMP = now.strftime('%Y-%m-%dT%H:%M:%S') + 'Z'
 
 # How many lines to send to ES in bulk
 BULK_SIZE = 1000
+
+# Data retention
+RETENTION_DAYS = 9
 
 # Create the index if it doesn't already exist
 response = requests.head(f"{FULL_INDEX_URL}")
@@ -45,6 +48,34 @@ if response.status_code == 404:
         create_index_response.raise_for_status()
     except requests.exceptions.RequestException as e:
         print(f"Error creating index : {e}")
+
+# Purge old indices
+def purge_old_indices():
+    indices_url = f"http://{ELASTICSEARCH_HOST}:{ELASTICSEARCH_PORT}/_cat/indices?s=index"
+    try:
+        response = requests.get(indices_url)
+        response.raise_for_status()
+        indices = response.text.splitlines()
+        days_ago = now - timedelta(days=RETENTION_DAYS)
+        for index in indices:
+            index_name = index.split()[2]  # Assuming the index name is the third column
+            if index_name.startswith('sflow-'):
+                try:
+                    index_date = datetime.strptime(index_name.split('-')[1], '%Y.%m.%d')
+                    if index_date < days_ago:
+                        delete_url = f"http://{ELASTICSEARCH_HOST}:{ELASTICSEARCH_PORT}/{index_name}"
+                        delete_response = requests.delete(delete_url)
+                        if delete_response.status_code == 200:
+                            print(f"Deleted index {index_name}")
+                        else:
+                            print(f"Failed to delete index {index_name}: {delete_response.text}")
+                except ValueError as e:
+                    print(f"Error parsing date from index name {index_name}: {e}")
+    except requests.exceptions.RequestException as e:
+        print(f"Error retrieving indices: {e}")
+
+# Purge old indices before proceeding
+purge_old_indices()
 
 # Send data to elasticsearch
 def send_to_elasticsearch(data):
