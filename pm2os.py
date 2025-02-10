@@ -98,7 +98,7 @@ def purge_old_indices(target):
                 try:
                     index_date = datetime.strptime(index_name.split('-')[1], '%Y.%m.%d')
                     if index_date < days_ago:
-                        delete_url = f"https://{OPENSEARCH_HOST}:{OPENSEARCH_PORT}/{index_name}"
+                        delete_url = f"https://{target['host']}:{target['port']}/{index_name}"
                         delete_response = requests.delete(delete_url, auth=target['auth'], verify=False)
                         if delete_response.status_code == 200:
                             print(f"Deleted index {index_name}")
