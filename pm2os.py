@@ -2,7 +2,7 @@
 """
 Fetch data from pmacct, send it to opensearch.
 
-Copyright (C) 2024 Canonical Ltd.
+Copyright (C) 2024-2025 Canonical Ltd.
 Author: Laurent Sesquès <laurent.sesques@canonical.com>
 
 This program is free software: you can redistribute it and/or modify
