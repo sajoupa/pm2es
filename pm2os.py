@@ -42,6 +42,13 @@ TARGETS = [
     }
 ]
 
+SETTINGS = {
+    "index": {
+        "number_of_shards": 3,
+        "number_of_replicas": 1,
+    }
+}
+
 # Set the index name with format sflow-YYYY.MM.DD
 now = datetime.utcnow()
 INDEX_NAME = f"sflow-{now.strftime('%Y.%m.%d')}"
@@ -64,7 +71,7 @@ def create_index_if_needed(target):
         try:
             create_index_response = requests.put(
                 full_index_url,
-                json={"settings": {}, "mappings": {}},
+                json={"settings": SETTINGS, "mappings": {}},
                 auth=target['auth'],
                 verify=False
             )
